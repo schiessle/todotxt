@@ -1,0 +1,185 @@
+#!/bin/bash
+# open - action for todo.txt command line client to open referenced files
+#
+# Copyright (C) 2014 Sebastian Heinlein <devel@glatzor.de>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# This tool was inspired by the todo.txt action nav written by
+# Philippe Teuwen and taskopen written by Johannes Schlatow
+
+action=$1
+shift
+
+function usage(){
+	echo "  Open documents attached to todo items:"
+	echo "    open ITEM#"
+	echo "      The following attachement types are supported:"
+	echo ""
+	echo "      mail:*"
+	echo "           opens the mail in mutt (requires muttjump)"
+	echo "           See https://github.com/weisslj/muttjump"
+	echo "           To convert mails from mutt into a task"
+	echo "           see https://www.gitorious.org/todo-txt-glatzor"
+	echo "      url:*|www.*|http://*|https://*"
+	echo "           opens the URL in a web browser e.g."
+	echo "           http://www.todotext.com, url:www.todotxt.com or"
+	echo "           www.todotxt.com"
+	echo "      note:*"
+	echo "           edit the note (requires the notesedit action)"
+	echo "           See https://github.com/the1ts/todo.txt-plugins"
+	echo "      file:*|~/*|/*"
+	echo "           open the path with the installed default handler"
+	echo "           (requires xdg-open or open), e.g."
+	echo "           file:/home/user/README.txt, /home/user/README.txt"
+	echo "           or ~/README.txt"
+	echo ""
+	exit
+}
+
+function has_command() {
+	command -v $1 > /dev/null 2>&1
+	return $?
+}
+
+function get_available_command() {
+	for CMD in $@ "NULL"; do
+		if [ $CMD == "NULL" ]; then
+			echo "ERROR: Could not find one of the "
+			echo "following programmes:"
+			echo "$@"
+			exit 1
+		fi
+		if has_command $CMD; then
+			echo $CMD
+			break
+		fi
+	done
+}
+	
+function has_gui() {
+	if [ x$DISPLAY == x ]; then
+		return 1
+	else
+		return 0
+	fi
+}
+
+function open_in_browser() {
+	URL=$1
+	if has_gui; then
+		$(get_available_command x-www-browser xdg-open firefox \
+			/cygdrive/c/Program Files/Mozilla Firefox/firefox.exe \
+			/usr/bin/open) $URL
+	else
+		$(get_available_command www-browser links lynx) $URL
+	fi
+	}
+
+
+[ "$action" = "usage" ] && usage
+
+if ! [[ "$1" =~ ^[0-9]+$ ]]; then
+	echo "ERROR: Invalid todo item $1"
+	usage
+	exit 1
+fi
+
+LINE=$(sed "$1!d" "$TODO_FILE")
+if [ "$LINE" = "" ]; then
+	echo "ERROR: Could not find todo item $1"
+	exit 1
+fi
+
+# Collect items that we can open
+LINE=$(sed "$1!d" "$TODO_FILE")
+REGEX_MAIL="mail:"
+REGEX_THUNDERLINK="thunderlink:"
+REGEX_CLAWS="claws:"
+REGEX_URL="(url:|https?://|www\.)"
+REGEX_NOTE="note:"
+REGEX_BUG="(lp|bug):"
+REGEX_FILE="(file:)?~?/"
+ITEMS=$(echo $LINE | \
+	grep -E -o " ($REGEX_MAIL|$REGEX_THUNDERLINK|$REGEX_CLAWS|$REGEX_NOTE|$REGEX_URL|$REGEX_FILE|$REGEX_BUG)[^ ]+")
+
+LEN_ITEMS=$(echo "$ITEMS"| wc -w)
+if [ $LEN_ITEMS -eq 0 ]; then
+	 echo "ERROR: Could not find any items to open"
+	 echo $LINE
+	 exit 1
+elif [ $LEN_ITEMS -eq 1 ]; then
+	 ITEM="${ITEMS//[[:space:]]/}"
+elif [ $LEN_ITEMS -gt 1 ]; then
+	PS3="Select the number of the item that you want to open: "
+	select ITEM in $ITEMS; do
+		if [ ! -n "$ITEM" ]; then
+			 echo "Cancelled"
+			 exit 1
+		fi
+		break
+	done
+fi
+
+echo "Opening $ITEM..."
+
+
+case $ITEM in
+	mail:*)
+		if has_command "muttjump"; then
+			muttjump ${ITEM:5}
+		else
+			echo "ERROR: muttjump is not installed"
+			echo "It is required to open referenced mails"
+			echo "See https://github.com/weisslj/muttjump"
+			echo "Don't forget to set MUTTJUMP_INDEXER in .bashrc"
+			exit 1
+		fi
+		;;
+	claws:*)
+		claws-mail --select ${ITEM:8} &> /dev/null
+		;;
+	thunderlink:*)
+		thunderbird -thunderlink $ITEM
+		;;
+	www.*)
+		open_in_browser "http://$ITEM"
+		;;
+	url:*)
+		open_in_browser "${ITEM:4}"
+		;;
+	http://*)
+		open_in_browser "$ITEM"
+		;;
+	note:*)
+		if [ -e $TODO_ACTIONS_DIR/notesedit ]; then
+			"$TODO_SH" notesedit ${ITEM:5}
+		else
+			echo "ERROR: the notesedit action is not installed"
+			echo "It is required to open referenced notes"
+			echo "See https://github.com/the1ts/todo.txt-plugins"
+			exit 1
+		fi
+		;;
+	/*|~/*)
+		$(get_available_command xdg-open /usr/bin/open) $ITEM
+		;;
+	lp:*)
+		open_in_browser "https://bugs.launchpad.net/bugs/${ITEM:3}"
+		;;
+	bug:*)
+		open_in_browser "https://bugs.debian.org/${ITEM:11}"
+		;;
+		*)
+esac
