@@ -148,7 +148,7 @@ case $ITEM in
 		fi
 		;;
 	claws:*)
-		claws-mail --select ${ITEM:8} &> /dev/null
+		claws-mail --select ${ITEM:8} </dev/null &>/dev/null &
 		;;
 	thunderlink:*)
 		thunderbird -thunderlink $ITEM
