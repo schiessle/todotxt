@@ -109,10 +109,12 @@ REGEX_THUNDERLINK="thunderlink:"
 REGEX_CLAWS="claws:"
 REGEX_URL="(url:|https?://|www\.)"
 REGEX_NOTE="note:"
+REGEX_CORE_ISSUE="core#"
+REGEX_ISSUE="#"
 REGEX_BUG="(lp|bug):"
 REGEX_FILE="(file:)?~?/"
 ITEMS=$(echo $LINE | \
-	grep -E -o " ($REGEX_MAIL|$REGEX_THUNDERLINK|$REGEX_CLAWS|$REGEX_NOTE|$REGEX_URL|$REGEX_FILE|$REGEX_BUG)[^ ]+")
+	grep -E -o " ($REGEX_MAIL|$REGEX_THUNDERLINK|$REGEX_CORE_ISSUE|$REGEX_ISSUE|$REGEX_CLAWS|$REGEX_NOTE|$REGEX_URL|$REGEX_FILE|$REGEX_BUG)[^ ]+")
 
 LEN_ITEMS=$(echo "$ITEMS"| wc -w)
 if [ $LEN_ITEMS -eq 0 ]; then
@@ -161,6 +163,12 @@ case $ITEM in
 		;;
 	http://*)
 		open_in_browser "$ITEM"
+		;;
+	\#*)
+		open_in_browser "http://github.com/owncloud/core/issues/"${ITEM:1}
+                ;;
+	core#*)
+		open_in_browser "http://github.com/owncloud/core/issues/"${ITEM:5}
 		;;
 	note:*)
 		if [ -e $TODO_ACTIONS_DIR/notesedit ]; then
