@@ -14,3 +14,20 @@ To use this action you just need to copy it to *~/.todo.actions.d/open*. Afterwa
 ```
 t open <task_number_which_contains_a_mail_link>
 ```
+
+todo.actions.d/hide
+-------------------
+
+This extensions allows you to hide certain tasks, by default all task
+descriptions which contains 'h:1' will be hidden. For example this allows you
+to define all your contexts and projects in a hidden task to enable
+auto-conmpletion even if currently no open task is associated with them. This
+can be quite useful on its own but becomes really useful in combination with
+the Android App Simpletask which also knows the concept of hidden tasks.
+
+To apply the hide operation to all your views just edit your todo.sh alias to
+look similiar to:
+
+```
+alias t='/path/to/todosh/todo.sh -d /path/to/todosh/todo.cfg hide'
+```
