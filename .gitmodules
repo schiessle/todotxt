@@ -1,0 +1,6 @@
+[submodule "todo.actions.d/view"]
+	path = todo.actions.d/view
+	url = git@github.com:markwu/todo-cli-plugins.git
+[submodule "todo.actions.d/note"]
+	path = todo.actions.d/note
+	url = git@github.com:mgarrido/todo.txt-cli.git
